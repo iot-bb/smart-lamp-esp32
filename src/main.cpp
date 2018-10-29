@@ -17,6 +17,13 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include <nvs.h>
+#include <nvs_flash.h>
+#include "FS.h"
+#include "SPIFFS.h"
+
+#define FORMAT_SPIFFS_IF_FAILED true
+const char* configFilePath = "/config.json";
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -50,7 +57,7 @@ class MyCallbacks: public BLECharacteristicCallbacks {
       strcpy(SSID, root["ssid"].as<String>().c_str());
       strcpy(PASSWORD, root["password"].as<String>().c_str());
 
-      const char* ssid = "TOR-WIFI";
+      const char* ssid = "Tortechnocom";
       const char* password = "12345789";
       //WiFi.begin(SSID, PASSWORD);
       WiFi.begin(ssid, password);
@@ -68,17 +75,47 @@ class MyCallbacks: public BLECharacteristicCallbacks {
         Serial.println("WiFi connected");
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
+        digitalWrite(5, HIGH);
       } else {
         Serial.println("WiFi connection timeout.");
       }
     }
   }
 };
+void initialConfigFile() {
+  Serial.println("Initial config file.....");
+  File configFile = SPIFFS.open(configFilePath, FILE_WRITE);
+  if (!configFile) {
+    Serial.println("No config file then create a new config file.");
+    configFile = SPIFFS.open(configFilePath, FILE_WRITE);
+    if (configFile.print("Test")) {
+      Serial.println("File written");      
+    }
+  } else {
+    Serial.print("Read config file: ");
+    Serial.println(configFile.name());
 
+    Serial.println(configFile.readString());
+    
+    if(configFile.print("Test")){
+        Serial.println("- file written");
+        Serial.println(configFile.readStringUntil('t'));
+    } else {
+        Serial.println("- frite failed");
+    }
+    configFile.close();
+  }
+}
 void setup() {
   Serial.begin(115200);
-  pinMode(2, OUTPUT);
-  WiFi.mode(WIFI_MODE_STA);
+  delay(1000);
+  Serial.println("Start Smart Lamp...");
+  // if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
+  //   Serial.println("SPIFFS Mount Failed");
+  // }
+  
+  pinMode(2, OUTPUT); // Blue tooth
+  pinMode(5, OUTPUT); // Wifi
   BLEDevice::init("IoTBB-SmartLamp");
   BLEServer *pServer = BLEDevice::createServer();
 
